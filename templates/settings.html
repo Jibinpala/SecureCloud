@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox Settings - Portal Configuration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Settings</span>
+        </div>
+
+        <div class="nav-actions">
+            <a href="/dashboard" class="nav-btn">← Back</a>
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/dashboard" class="nav-link-kx">📊 Portal Main</a></li>
+                <li><a href="/security-timeline" class="nav-link-kx">🛡️ Audit Log</a></li>
+                <li><a href="/settings" class="nav-link-kx active">⚙️ Settings</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in" style="margin-bottom: 1.5rem;">
+                <div>
+                    <h1>Portal Settings</h1>
+                    <p style="color: var(--text-secondary);">Configure your identity and security protocols</p>
+                </div>
+                <div class="kx-user-pill">
+                    <span style="color: var(--primary);">👤</span>
+                    <span>{{ user.username }}</span>
+                    <span class="plan-badge" style="margin-left: 0.5rem;">{{ user.plan.upper() }}</span>
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div style="display:none;">
+                {% for msg in messages %}
+                <div class="kx-flash-msg">{{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="kx-grid kx-fade-in">
+                <!-- Account Info -->
+                <div class="kx-card">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">👤 Identity Profile</h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">ID
+                                ID</span>
+                            <span style="font-weight: 700;">{{ user.username }}</span>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <span
+                                style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Storage
+                                Limit</span>
+                            <span>{{ "%.1f MB"|format(user.storage_used/1024/1024) }} Used</span>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="/update_profile" style="margin-top: 1.5rem;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div style="margin-bottom: 1rem;">
+                            <label
+                                style="display: block; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Organization</label>
+                            <input type="text" name="organization" value="{{ user.organization or '' }}"
+                                placeholder="Enter organization"
+                                style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; color: white;">
+                        </div>
+                        <div style="margin-bottom: 1.5rem;">
+                            <label
+                                style="display: block; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Department</label>
+                            <select name="department"
+                                style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; color: white;">
+                                <option value="">Select Department</option>
+                                <option value="hr" {{ 'selected' if user.department=='hr' }}>HR</option>
+                                <option value="finance" {{ 'selected' if user.department=='finance' }}>Finance</option>
+                                <option value="legal" {{ 'selected' if user.department=='legal' }}>Legal</option>
+                                <option value="it" {{ 'selected' if user.department=='it' }}>IT</option>
+                                <option value="operations" {{ 'selected' if user.department=='operations' }}>Operations
+                                </option>
+                            </select>
+                        </div>
+                        <button type="submit" class="nav-link-kx"
+                            style="width: 100%; justify-content: center; background: var(--primary); color: black;">Update
+                            Profile</button>
+                    </form>
+                </div>
+
+                <!-- Password Info -->
+                <div class="kx-card">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">🔒 Security Re-key</h3>
+                    <form method="POST" action="/change_password" style="margin-top: 1.5rem;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div style="margin-bottom: 1rem;">
+                            <label
+                                style="display: block; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Current
+                                Key</label>
+                            <input type="password" name="current_password" required
+                                style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; color: white;">
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label
+                                style="display: block; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">New
+                                Key</label>
+                            <input type="password" name="new_password" required minlength="8"
+                                style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; color: white;">
+                        </div>
+                        <button type="submit" class="nav-link-kx"
+                            style="width: 100%; justify-content: center; border-color: var(--primary);">Initialize
+                            Reset</button>
+                    </form>
+                </div>
+
+                <!-- MFA & API -->
+                <div class="kx-card">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">🛡️ Security Protocols</h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">MFA Backup</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Generate
+                                redundant codes for emergency access.</p>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="generateBackupCodes()" class="nav-link-kx" id="genBackupBtn"
+                                    style="border-color: var(--primary); flex: 1;">Generate Codes</button>
+                                <button onclick="revokeBackupCodes()" class="nav-link-kx" id="revokeBackupBtn"
+                                    style="border-color: var(--error); background: rgba(255,100,100,0.05); flex: 1;">Revoke
+                                    All</button>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border); padding-top: 1.5rem; margin-top: 1rem;">
+                            <h4 style="margin-bottom: 0.5rem; color: var(--text-primary);">API Registry</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Access
+                                protocols for external system integration.</p>
+
+                            {% if user.api_key %}
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.65rem; color: var(--primary); margin-bottom: 0.4rem; text-transform: uppercase; font-weight: 800;">ACTIVE
+                                    API PROTOCOL KEY</label>
+                                <div
+                                    style="background: rgba(0,255,136,0.05); padding: 0.75rem; border-radius: 8px; font-family: monospace; font-size: 0.75rem; color: var(--primary); display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0, 255, 136, 0.1);">
+                                    <code id="apiKey" style="word-break: break-all;">{{ user.api_key }}</code>
+                                    <button onclick="copyApiKey()" class="copy-btn" title="Copy Key">📋</button>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <form method="POST" action="/generate_api_key" style="margin-top: 1rem;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="nav-link-kx"
+                                    style="width: 100%; font-size: 0.75rem; border-color: var(--primary); background: rgba(0,255,136,0.05);">
+                                    {% if user.api_key %}Regenerate Key{% else %}Register API Key{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const flashes = document.querySelectorAll('.kx-flash-msg');
+            flashes.forEach(f => {
+                KxUI.toast(f.innerText, 'success');
+                f.remove();
+            });
+        });
+
+        function copyApiKey() {
+            const apiKey = document.getElementById('apiKey').textContent;
+            navigator.clipboard.writeText(apiKey).then(() => {
+                KxUI.success('Key copied to clipboard');
+            });
+        }
+
+        async function generateBackupCodes() {
+            const btn = document.getElementById('genBackupBtn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/mfa/generate-backup-codes', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showBackupCodes(data.codes);
+                    KxUI.success('8 new backup codes generated');
+                } else {
+                    KxUI.error('Failed to generate codes: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                KxUI.error('Network error during generation');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Codes';
+            }
+        }
+        async function revokeBackupCodes() {
+            KxUI.confirm("Are you sure you want to revoke ALL recovery codes? This will remove your emergency access protocols.", async () => {
+                const btn = document.getElementById('revokeBackupBtn');
+                btn.disabled = true;
+                btn.textContent = 'Revoking...';
+
+                try {
+                    const response = await fetch('/mfa/revoke-backup-codes', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-Token': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        KxUI.success('All recovery protocols revoked');
+                    } else {
+                        KxUI.error(data.message || 'Revocation failed');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    KxUI.error('Communication failure');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Revoke All';
+                }
+            });
+        }
+
+        function showBackupCodes(codes) {
+            const modal = document.getElementById('backupModal');
+            const container = document.getElementById('backupCodesList');
+            container.innerHTML = '';
+
+            codes.forEach(code => {
+                const span = document.createElement('span');
+                span.style = 'font-family: monospace; background: rgba(0,255,136,0.1); padding: 0.5rem; border-radius: 5px; border: 1px solid rgba(0, 255, 136, 0.2); font-size: 1.1rem; text-align: center;';
+                span.textContent = code;
+                container.appendChild(span);
+            });
+
+            modal.classList.add('active');
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backupModal').classList.remove('active');
+        }
+    </script>
+
+    <!-- Backup Codes Modal -->
+    <div id="backupModal" class="kx-confirm-overlay">
+        <div class="kx-confirm-card" style="max-width: 500px;">
+            <h3 style="color: var(--primary);">⚠️ SECURE RECOVERY CODES</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem;">
+                These single-use codes bypass MFA. Store them in an encrypted vault.
+            </p>
+            <div id="backupCodesList"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 2rem;">
+            </div>
+            <button onclick="closeBackupModal()" class="nav-link-kx"
+                style="width: 100%; justify-content: center; background: var(--primary); color: black;">PROTOCOLS
+                SAVED</button>
+        </div>
+    </div>
+</body>
+
+</html>

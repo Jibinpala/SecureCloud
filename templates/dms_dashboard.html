@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox DMS - Document Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox DMS</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="#" class="nav-link-kx active" onclick="showSection('my-documents', this)">📁 My Docs</a>
+                </li>
+                <li><a href="#" class="nav-link-kx" onclick="showSection('department-docs', this)">🏢 Department</a>
+                </li>
+                <li><a href="#" class="nav-link-kx" onclick="showSection('pending-approvals', this)">⚖️ Approvals</a>
+                </li>
+                <li><a href="#" class="nav-link-kx" onclick="showSection('search', this)">🔍 Advanced Search</a></li>
+                <li><a href="#" class="nav-link-kx" onclick="showSection('upload', this)">📤 Bulk Upload</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>Knowledge Matrix</h1>
+                    <p style="color: var(--text-secondary);">Structured document management for {{ session['user'] }}
+                    </p>
+                </div>
+                <div class="kx-user-pill hide-mobile">
+                    <span style="color: var(--primary);">●</span>
+                    <span>{{ session['user'] }}</span>
+                </div>
+            </header>
+
+            <div class="kx-grid kx-fade-in" style="animation-delay: 0.1s;">
+                <!-- My Documents Section -->
+                <section id="my-documents" class="content-section active" style="grid-column: 1 / -1;">
+                    <div class="kx-card">
+                        <div class="kx-card-header">
+                            <h2 style="margin: 0; font-size: 1.5rem;">Personnel Dossier</h2>
+                            <div class="kx-actions-group">
+                                <button class="select-btn" onclick="showUploadModal()">NEW ARCHIVE</button>
+                            </div>
+                        </div>
+
+                        <div class="documents-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.5rem;">
+                            {% for doc in documents %}
+                            <div class="kx-card"
+                                style="padding: 1.5rem; background: rgba(255,255,255,0.02); border-style: dashed;">
+                                <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                                    <div style="font-size: 2.5rem;">📄</div>
+                                    <div style="flex: 1;">
+                                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--primary);">{{
+                                            doc.original_name }}</h3>
+                                        <p style="margin: 0.25rem 0; font-size: 0.8rem; color: var(--text-muted);">DEPT:
+                                            {{ doc.department }} | V_{{ doc.version }}</p>
+                                    </div>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                                    <span class="status-badge status-{{ doc.status }}"
+                                        style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">{{
+                                        doc.status }}</span>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <button class="nav-link-kx" onclick="previewFile('{{ doc.id }}')"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">VIEW</button>
+                                        <button class="nav-link-kx" onclick="downloadFile('{{ doc.id }}')"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">⬇️</button>
+                                        <button class="nav-link-kx" onclick="deleteFileProtocol('{{ doc.id }}')"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: #ff3e3e; border-color: rgba(255, 62, 62, 0.3);">DELETE</button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Department Documents Section -->
+                <section id="department-docs" class="content-section" style="grid-column: 1 / -1; display: none;">
+                    <div class="kx-card">
+                        <div class="kx-card-header">
+                            <h2 style="margin: 0; font-size: 1.5rem;">Unit Intelligence (Dept)</h2>
+                            <div class="kx-actions-group">
+                                <p style="color: var(--primary); font-size: 0.8rem; font-weight: 800; margin: 0;">TOTAL
+                                    ASSETS: {{ department_docs|length }}</p>
+                            </div>
+                        </div>
+                        <div class="documents-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.5rem;">
+                            {% for doc in department_docs %}
+                            <div class="kx-card"
+                                style="padding: 1.5rem; background: rgba(57, 255, 20, 0.02); border: 1px solid rgba(57, 255, 20, 0.1);">
+                                <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                                    <div style="font-size: 2rem;">📂</div>
+                                    <div style="flex: 1;">
+                                        <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">{{
+                                            doc.original_name }}</h3>
+                                        <p style="margin: 0.25rem 0; font-size: 0.75rem; color: var(--text-muted);">
+                                            Source: {{ doc.username }}</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+                                    <button class="nav-link-kx" onclick="previewFile('{{ doc.id }}')"
+                                        style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">VIEW</button>
+                                    <button class="nav-link-kx" onclick="downloadFile('{{ doc.id }}')"
+                                        style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">⬇️</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if not department_docs %}
+                            <p style="color: var(--text-muted); text-align: center; grid-column: 1/-1; padding: 3rem;">
+                                No department assets found in this sector.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Pending Approvals Section -->
+                <section id="pending-approvals" class="content-section" style="grid-column: 1 / -1; display: none;">
+                    <div class="kx-card">
+                        <h2 style="margin-bottom: 2rem;">Workflow Verification</h2>
+                        <div class="table-container">
+                            <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                                <thead>
+                                    <tr
+                                        style="color: var(--text-muted); font-size: 0.75rem; border-bottom: 1px solid var(--border);">
+                                        <th style="padding: 1rem;">ASSET</th>
+                                        <th style="padding: 1rem;">SUBMITTED BY</th>
+                                        <th style="padding: 1rem;">DATE</th>
+                                        <th style="padding: 1rem; text-align: right;">ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for app in pending_approvals %}
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <td style="padding: 1rem;">{{ app.original_name }}</td>
+                                        <td style="padding: 1rem; color: var(--text-muted);">{{ app.username }}</td>
+                                        <td style="padding: 1rem; color: var(--text-muted);">{{ app.upload_date[:10] }}
+                                        </td>
+                                        <td style="padding: 1rem; text-align: right;">
+                                            <button data-id="{{ app.workflow_id }}" data-decision="true"
+                                                class="select-btn approve-btn"
+                                                style="background: var(--primary); color: var(--bg-primary); padding: 0.3rem 0.8rem; font-size: 0.7rem;">APPROVE</button>
+                                            <button data-id="{{ app.workflow_id }}" data-decision="false"
+                                                class="nav-link-kx approve-btn"
+                                                style="padding: 0.3rem 0.8rem; font-size: 0.7rem; border: 1px solid var(--error); color: var(--error);">REJECT</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if not pending_approvals %}
+                                    <tr>
+                                        <td colspan="4"
+                                            style="padding: 3rem; text-align: center; color: var(--text-muted);">Queues
+                                            are clear. No pending protocols.</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Advanced Search Section -->
+                <section id="search" class="content-section" style="grid-column: 1 / -1; display: none;">
+                    <div class="kx-card">
+                        <h2>Advanced Data Query</h2>
+                        <div
+                            style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 1rem; margin-bottom: 2rem;">
+                            <input type="text" id="searchQuery" placeholder="Search by name or description..."
+                                style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 0.75rem; border-radius: 8px;">
+                            <select id="searchType"
+                                style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 0.75rem; border-radius: 8px;">
+                                <option value="">Any Type</option>
+                                {% for type in document_types %}
+                                <option value="{{ type }}">{{ type.title() }}</option>
+                                {% endfor %}
+                            </select>
+                            <select id="searchDept"
+                                style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 0.75rem; border-radius: 8px;">
+                                <option value="">Any Dept</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept }}">{{ dept.upper() }}</option>
+                                {% endfor %}
+                            </select>
+                            <button onclick="executeSearch()" class="select-btn">QUERY</button>
+                        </div>
+                        <div id="searchResults" class="documents-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <!-- Search results populated by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bulk Upload Section -->
+                <section id="upload" class="content-section" style="grid-column: 1 / -1; display: none;">
+                    <div class="kx-card" style="text-align: center; padding: 4rem 2rem; border-style: dashed;">
+                        <h2 style="margin-bottom: 1rem;">Mass Protocol Ingestion</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">Upload multiple assets simultaneously
+                            to the Knowledge Matrix</p>
+                        <button class="select-btn" onclick="showUploadModal()"
+                            style="padding: 1.5rem 3rem; font-size: 1.2rem;">INITIATE BUNDLE UPLOAD</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- KxUI Components are now handled dynamically by kxui.js -->
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+        <div class="modal-content kx-card" style="width: 100%; max-width: 500px; padding: 2.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Protocol Ingestion</h2>
+                <span onclick="closeModal()"
+                    style="cursor: pointer; font-size: 2rem; color: var(--text-muted);">&times;</span>
+            </div>
+            <form id="dmsUploadForm">
+                <div style="margin-bottom: 1.5rem;">
+                    <label
+                        style="display: block; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--primary);">Data
+                        Source</label>
+                    <input type="file" name="file" multiple required
+                        style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 1rem; border-radius: 12px;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <div>
+                        <label
+                            style="display: block; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--text-muted);">Asset
+                            Type</label>
+                        <select name="document_type"
+                            style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 0.8rem; border-radius: 8px;">
+                            {% for type in document_types %}
+                            <option value="{{ type }}">{{ type.title() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            style="display: block; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--text-muted);">Sector</label>
+                        <select name="department"
+                            style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 0.8rem; border-radius: 8px;">
+                            {% for dept in departments %}
+                            <option value="{{ dept }}">{{ dept.upper() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="select-btn" style="width: 100%; padding: 1.25rem;">EXECUTE SECURE
+                    UPLOAD</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+    <script>
+        function showSection(sectionId, el) {
+            document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-link-kx').forEach(l => l.classList.remove('active'));
+            const target = document.getElementById(sectionId);
+            if (target) target.style.display = 'grid';
+            if (el) el.classList.add('active');
+        }
+
+        async function approveProtocol(id, decision) {
+            KxUI.confirm(`Confirm ${decision ? 'APPROVAL' : 'REJECTION'} of this data protocol?`, async () => {
+                const formData = new FormData();
+                formData.append('decision', decision ? 'approved' : 'rejected');
+                formData.append('csrf_token', '{{ csrf_token() }}');
+                try {
+                    const r = await fetch(`/approve/${id}`, { method: 'POST', body: formData });
+                    const d = await r.json();
+                    if (d.status === 'success') {
+                        KxUI.success(`Protocol ${decision ? 'approved' : 'rejected'} successfully`);
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                } catch (e) { KxUI.error('Workflow error. Command failed.'); }
+            });
+        }
+
+        async function executeSearch() {
+            const q = document.getElementById('searchQuery').value;
+            const type = document.getElementById('searchType').value;
+            const dept = document.getElementById('searchDept').value;
+            const results = document.getElementById('searchResults');
+            results.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Scanning Matrix...</p>';
+
+            try {
+                const r = await fetch(`/search?q=${q}&type=${type}&dept=${dept}`);
+                const data = await r.json();
+                results.innerHTML = '';
+                data.forEach(doc => {
+                    results.innerHTML += `
+                        <div class="kx-card" style="padding: 1.5rem; background: rgba(255,255,255,0.02);">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📄</div>
+                            <h3 style="margin: 0; font-size: 0.9rem; color: var(--primary);">${doc.original_name}</h3>
+                            <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">${doc.department.toUpperCase()} | ${doc.document_type}</p>
+                            <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.5rem; text-align: right;">
+                                <button class="nav-link-kx" onclick="previewFile('${doc.id}')" style="font-size: 0.6rem; padding: 0.2rem 0.5rem;">VIEW</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                if (data.length === 0) results.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No assets found in current query.</p>';
+            } catch (e) { KxUI.error('Search query failed.'); }
+        }
+
+        function previewFile(docId) { window.location.href = `/preview/${docId}`; }
+        function downloadFile(docId) { window.location.href = `/download/${docId}`; }
+        function showUploadModal() { document.getElementById('uploadModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('uploadModal').style.display = 'none'; }
+
+        document.getElementById('dmsUploadForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            btn.textContent = '🔄 PROCESSING...';
+            btn.disabled = true;
+            const formData = new FormData(this);
+            formData.append('csrf_token', '{{ csrf_token() }}');
+            try {
+                const r = await fetch('/upload', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const d = await r.json();
+                if (d.status === 'success') {
+                    KxUI.success(d.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    KxUI.error(d.message);
+                    btn.textContent = 'EXECUTE SECURE UPLOAD';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                KxUI.error('Upload protocol failed.');
+                btn.textContent = 'EXECUTE SECURE UPLOAD';
+                btn.disabled = false;
+            }
+        });
+        async function deleteFileProtocol(fileId) {
+            KxUI.confirm('Are you sure you want to move this asset to the Secure Trash?', async () => {
+                try {
+                    const r = await fetch(`/delete/${fileId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-Token': '{{ csrf_token() }}'
+                        }
+                    });
+                    const d = await r.json();
+                    if (d.status === 'success') {
+                        KxUI.success('Protocol moved to Trash.');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        KxUI.error(d.message);
+                    }
+                } catch (e) {
+                    KxUI.error('Decommissioning protocol failed.');
+                }
+            });
+        }
+
+        document.querySelectorAll('.approve-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const decision = btn.getAttribute('data-decision') === 'true';
+                approveProtocol(id, decision);
+            });
+        });
+    </script>
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+</body>
+
+</html>
+```

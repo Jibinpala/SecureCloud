@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - MFA Setup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}?v=2">
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .mfa-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            padding: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mfa-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 2rem;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .qr-frame {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 1.5rem 0;
+            max-width: 200px;
+            /* Constrain size */
+        }
+
+        .qr-frame img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .token-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1.25rem;
+            letter-spacing: 0.4rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .setup-steps {
+            text-align: left;
+            margin-bottom: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .setup-steps ol {
+            padding-left: 1.25rem;
+            margin: 0;
+        }
+
+        .setup-steps li {
+            margin-bottom: 0.4rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <div class="mfa-wrapper">
+        <div class="mfa-container">
+            <h2 style="margin: 0; color: var(--text-primary);">🛡️ Secure MFA Setup</h2>
+            <p style="margin-top: 0.5rem; margin-bottom: 0; color: var(--text-muted); font-size: 0.9rem;">Protect your
+                account with 2FA</p>
+
+            <div class="qr-frame">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="MFA QR Code">
+            </div>
+
+            <div class="setup-steps">
+                <ol>
+                    <li>Scan in your Authenticator app</li>
+                    <li>Enter the 6-digit code below</li>
+                </ol>
+            </div>
+
+            <form action="/mfa/enable" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="token" class="token-input" placeholder="000000" pattern="\d{6}" required
+                    maxlength="6">
+                <button type="submit" class="auth-btn" style="width: 100%;">ENABLE MFA</button>
+            </form>
+
+            <p style="margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-muted); word-break: break-all;">
+                Secret Key: <code style="color: var(--primary); font-family: monospace;">{{ secret }}</code>
+            </p>
+            <div style="margin-top: 1rem;">
+                <a href="/settings" style="color: var(--primary); text-decoration: none; font-size: 0.8rem;">Cancel &
+                    Return</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

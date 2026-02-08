@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - MFA Verification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .mfa-container {
+            max-width: 440px;
+            margin: 8rem auto;
+            padding: 2.5rem;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .token-input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--primary);
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.75rem;
+            letter-spacing: 0.5rem;
+            text-align: center;
+            margin: 1.5rem 0;
+            transition: all 0.2s ease;
+        }
+
+        .token-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+        }
+
+        .auth-btn {
+            padding: 1rem 1.5rem;
+            background: var(--gradient);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <div class="mfa-container">
+        <div
+            style="font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--primary); text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);">
+            🛡️</div>
+        <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;">Protocol Verification</h2>
+        <p id="mfaDesc"
+            style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem;">
+            Awaiting 6-digit TOTP signature</p>
+
+        <div id="flash-container">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="error-panel"
+                style="margin-top: 1.5rem; background: rgba(255,49,49,0.1); border: 1px solid var(--error); border-radius: 12px; padding: 1rem;">
+                {% for message in messages %}
+                <div class="error-msg" style="color: var(--error); font-size: 0.85rem; font-weight: 600;">⚠ {{ message
+                    }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <form action="/mfa/verify" method="POST" id="totpForm">
+            <input type="text" name="token" class="token-input" placeholder="000000" pattern="\d{6}" required
+                maxlength="6" autofocus>
+            <button type="submit" class="auth-btn" style="width: 100%;">Authorize Access</button>
+        </form>
+
+        <form action="/mfa/verify-backup" method="POST" id="backupForm" style="display: none;">
+            <p style="color: var(--text-muted); font-size: 0.7rem; margin-bottom: 1rem; text-transform: uppercase;">
+                Enter secure recovery asset</p>
+            <input type="text" name="backup_code" class="token-input"
+                style="font-size: 1.25rem; letter-spacing: 0.2rem;" placeholder="PROT-XXXX-XXXX" required
+                maxlength="10">
+            <button type="submit" class="auth-btn" style="width: 100%; background: var(--secondary);">Verify Backup
+                Code</button>
+        </form>
+
+        <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <a href="javascript:void(0)" id="toggleBackup" onclick="toggleBackupMode()"
+                style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 600;">Lost device?
+                Use recovery access</a>
+            <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.8rem;">Abort to Portal</a>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+
+    <script>
+        function toggleBackupMode() {
+            const totpForm = document.getElementById('totpForm');
+            const backupForm = document.getElementById('backupForm');
+            const toggleBtn = document.getElementById('toggleBackup');
+            const title = document.querySelector('h2');
+            const desc = document.getElementById('mfaDesc');
+
+            if (totpForm.style.display === 'none') {
+                totpForm.style.display = 'block';
+                backupForm.style.display = 'none';
+                toggleBtn.innerText = 'Lost device? Use recovery access';
+                title.innerText = 'Protocol Verification';
+                desc.innerText = 'Awaiting 6-digit TOTP signature';
+            } else {
+                totpForm.style.display = 'none';
+                backupForm.style.display = 'block';
+                toggleBtn.innerText = 'Use primary authorization app';
+                title.innerText = 'Recovery Mode';
+                desc.innerText = 'Input secure recovery key';
+            }
+        }
+    </script>
+    </div>
+</body>
+
+</html>

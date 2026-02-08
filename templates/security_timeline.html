@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox Security - Audit Matrix</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}?v=2">
+    <style>
+        .timeline-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .timeline-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            padding-bottom: 2rem;
+            border-left: 2px solid var(--border);
+        }
+
+        .timeline-item:last-child {
+            border-left: none;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -7px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease;
+        }
+
+        .timeline-content:hover {
+            transform: translateX(5px);
+            border-color: var(--primary);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .status-SUCCESS {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .status-FAILED {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .ip-info {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--primary);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Audit</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/dashboard" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/dashboard" class="nav-link-kx">📊 Portal Main</a></li>
+                <li><a href="/security-timeline" class="nav-link-kx active">🛡️ Audit Log</a></li>
+                <li><a href="/settings" class="nav-link-kx">⚙️ Settings</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>{{ title or 'Security Timeline' }}</h1>
+                    <p style="color: var(--text-secondary);">{{ subtitle or 'Audit of all security protocols' }}</p>
+                </div>
+            </header>
+
+            <div class="timeline-container kx-fade-in" style="margin: 0;">
+                <div class="timeline-card kx-card">
+                    <h3 style="margin-bottom: 2rem;">🛡️ Protocol Events</h3>
+                    {% if logs %}
+                    {% for log in logs %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="action-badge status-{{ log.status }}">{{ log.action.replace('_', ' ')
+                                    }}</span>
+                                <span class="timestamp">{{ log.timestamp.split('.')[0].replace('T', ' ') }}</span>
+                            </div>
+                            <p style="margin: 0.5rem 0; font-weight: 500;">{{ log.details }}</p>
+                            <div class="ip-info">SOURCE IP: {{ log.ip_address }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% elif custom_content %}
+                    <div class="kx-card" style="padding: 2rem; border: none; background: transparent;">
+                        <pre
+                            style="white-space: pre-wrap; font-family: 'Inter', sans-serif; line-height: 1.8; color: var(--text-secondary);">{{ custom_content }}</pre>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: var(--text-muted);">No security events recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+</body>
+
+</html>

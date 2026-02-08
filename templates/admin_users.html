@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - Manage Users</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Admin</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/admin" class="nav-link-kx">📊 Command Center</a></li>
+                <li><a href="/admin/users" class="nav-link-kx active">👥 Users</a></li>
+                <li><a href="/admin/files" class="nav-link-kx">📁 Master Files</a></li>
+                <li><a href="/admin/security" class="nav-link-kx">🔒 Security Logs</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>User Management</h1>
+                    <p style="color: var(--text-secondary);">Manage all registered personnel</p>
+                </div>
+                <div class="kx-user-pill hide-mobile" style="border-color: var(--primary);">
+                    <span style="color: var(--primary);">★</span>
+                    <span>Admin: {{ session.get('user', 'admin') }}</span>
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div style="display:none;">
+                {% for msg in messages %}
+                <div class="kx-flash-msg">{{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="kx-card kx-fade-in" style="animation-delay: 0.1s;">
+                <div class="kx-card-header">
+                    <h3 style="margin: 0;">👥 All Registered Users</h3>
+                </div>
+                <div class="kx-table-wrapper">
+                    <table class="kx-table">
+                        <thead>
+                            <tr>
+                                <th class="hide-mobile">ID</th>
+                                <th>USERNAME</th>
+                                <th class="hide-mobile">ROLE</th>
+                                <th>STATUS</th>
+                                <th style="text-align: right;">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users %}
+                            <tr>
+                                <td class="hide-mobile" style="color: var(--text-muted);">#{{ u[0] }}</td>
+                                <td><strong style="color: white;">{{ u[1] }}</strong></td>
+                                <td class="hide-mobile">
+                                    <span
+                                        style="background: rgba(57, 255, 20, 0.1); color: var(--primary); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem;">{{
+                                        u[2].upper() }}</span>
+                                </td>
+                                <td>
+                                    {% if user_status[u[1]]['suspended'] %}
+                                    <span
+                                        style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem;">SUSPENDED</span>
+                                    {% elif user_status[u[1]]['locked'] %}
+                                    <span
+                                        style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem;">LOCKED</span>
+                                    {% else %}
+                                    <span
+                                        style="background: rgba(57, 255, 20, 0.1); color: var(--primary); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem;">ACTIVE</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                        {% if u[2] != 'admin' %}
+                                        {% if user_status[u[1]]['suspended'] %}
+                                        <a href="/admin/unsuspend/{{ u[1] }}" class="nav-link-kx"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">ACTIVATE</a>
+                                        {% else %}
+                                        <a href="/admin/suspend/{{ u[1] }}" class="nav-link-kx"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: #f59e0b;">SUSPEND</a>
+                                        {% endif %}
+
+                                        {% if user_status[u[1]]['locked'] or user_status[u[1]]['suspended'] %}
+                                        <a href="/admin/unlock/{{ u[1] }}" class="nav-link-kx"
+                                            style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">UNLOCK</a>
+                                        {% endif %}
+                                        {% else %}
+                                        <span style="color: var(--text-muted); font-size: 0.75rem;">SYSTEM ROOT</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for flash messages and show as toasts
+            const flashes = document.querySelectorAll('.kx-flash-msg');
+            flashes.forEach(f => {
+                KxUI.toast(f.innerText, 'success');
+                f.remove();
+            });
+        });
+    </script>
+</body>
+
+</html>

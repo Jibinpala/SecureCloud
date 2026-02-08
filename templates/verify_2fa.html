@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureCloud - 2FA Verification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo-section">
+                <div class="logo-circle">
+                    <div class="logo-inner">SC</div>
+                </div>
+                <h1 class="title">2FA VERIFICATION</h1>
+                <p class="subtitle">ENTER AUTHENTICATOR CODE</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="error-panel">
+                  {% for msg in messages %}
+                    <div class="error-msg">⚠ {{ msg }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="login-form">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <input type="text" name="token" placeholder="6-DIGIT CODE" required maxlength="6" autocomplete="off">
+                        <div class="input-line"></div>
+                    </div>
+                </div>
+
+                <div class="security-notice">
+                    <p>🔐 Enter the 6-digit code from your authenticator app</p>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <span>VERIFY ACCESS</span>
+                    <div class="btn-glow"></div>
+                </button>
+            </form>
+
+            <div class="footer-links">
+                <a href="/" class="register-link">← BACK TO LOGIN</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

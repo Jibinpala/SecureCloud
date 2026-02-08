@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}?v=2">
+    <style>
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            padding: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 440px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem 2.5rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-circle {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 0.25rem 0;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin: 0;
+        }
+
+        .error-panel {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-msg {
+            color: var(--error);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .eye-toggle {
+            position: absolute;
+            right: 0.75rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .eye-toggle:hover {
+            color: var(--primary);
+        }
+
+        .input-line {
+            display: none;
+        }
+
+        .captcha-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .captcha-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .captcha-display {
+            background: var(--bg-secondary);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 0.1em;
+            font-family: monospace;
+        }
+
+        .login-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--gradient);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-glow {
+            display: none;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .footer-links a {
+            font-size: 0.875rem;
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-weight: 500;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 1.5rem;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .logo-circle {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <div class="login-container">
+        <div class="main-login-wrapper">
+            <div class="hero-section">
+                <div class="logo-glow-container">
+                    <div class="logo-circle">
+                        <div class="logo-inner">KX</div>
+                    </div>
+                </div>
+                <h1 class="hero-title">Kryox</h1>
+                <p class="hero-description" style="margin-bottom: 2rem;">Advanced encrypted cloud storage for your most
+                    sensitive data. Experience
+                    uncompromising security with a modern, intuitive interface.</p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">AES-256</span>
+                        <span class="stat-label">Encryption</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">E2EE</span>
+                        <span class="stat-label">Privacy</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="login-box">
+                <div class="login-header">
+                    <h2 class="title">Security Access</h2>
+                    <p class="subtitle">Enter credentials for verification</p>
+                </div>
+
+                <div id="flash-container">
+                    {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                    <div class="error-panel">
+                        {% for msg in messages %}
+                        <div class="error-msg">⚠ {{ msg }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+
+                <form method="POST" class="login-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="input-group">
+                        <label class="input-label"
+                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Identity
+                            ID</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="username" placeholder="Username" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label"
+                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Access
+                            Key</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" name="password" placeholder="Password" required>
+                            <span class="eye-toggle" id="toggle-icon">👁</span>
+                        </div>
+                    </div>
+
+                    <div class="captcha-section">
+                        <label class="captcha-label"
+                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Verification
+                            Protocol</label>
+                        <div class="captcha-display"
+                            style="border-radius: 12px; border: 1px dashed var(--primary); padding: 0.5rem;">{{ captcha
+                            }}</div>
+                        <div class="input-wrapper">
+                            <input type="text" name="captcha" placeholder="Enter session code" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-btn">Authorize Session</button>
+                </form>
+
+                <div class="footer-links" style="margin-top: 1.5rem; gap: 0.5rem;">
+                    <a href="{{ url_for('register') }}">Initialize New Account</a>
+                    <a href="{{ url_for('forgot_password') }}">Recovery Access</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var toggleIcon = document.getElementById('toggle-icon');
+            var passwordInput = document.getElementById('password');
+
+            toggleIcon.addEventListener('click', function () {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleIcon.textContent = '🔒';
+                } else {
+                    passwordInput.type = 'password';
+                    toggleIcon.textContent = '👁';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

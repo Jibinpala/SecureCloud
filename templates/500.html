@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - System Failure 500</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+    <style>
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-code {
+            font-size: 8rem;
+            font-weight: 900;
+            color: var(--error);
+            text-shadow: 0 0 30px rgba(255, 49, 49, 0.4);
+            margin: 0;
+            line-height: 1;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin: 1rem 0;
+        }
+
+        .error-desc {
+            color: var(--text-muted);
+            max-width: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .back-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <div class="error-container">
+        <div class="error-code">500</div>
+        <h1 class="error-title">System Breach</h1>
+        <p class="error-desc">A critical failure has occurred within the core logic. Security protocols are currently
+            re-initializing.</p>
+        <a href="/" class="back-btn">Force Reboot</a>
+    </div>
+</body>
+
+</html>

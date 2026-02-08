@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox Admin - System Stats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Admin</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/admin" class="nav-link-kx active">📊 Command Center</a></li>
+                <li><a href="/admin/users" class="nav-link-kx">👥 Users</a></li>
+                <li><a href="/admin/files" class="nav-link-kx">📁 Master Files</a></li>
+                <li><a href="/admin/security" class="nav-link-kx">🔒 Security Logs</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>System Overview</h1>
+                    <p style="color: var(--text-secondary);">Global command and control portal</p>
+                </div>
+                <div class="kx-user-pill hide-mobile" style="border-color: var(--primary);">
+                    <span style="color: var(--primary);">★</span>
+                    <span>Admin: {{ session.get('user', 'admin') }}</span>
+                </div>
+            </header>
+
+            <div class="kx-grid kx-fade-in" style="animation-delay: 0.1s;">
+                <!-- Users Card -->
+                <div class="kx-card">
+                    <div class="kx-card-header">
+                        <h3 style="margin: 0;">👥 Active Personnel</h3>
+                        <div class="kx-actions-group">
+                            <a href="/admin/users"
+                                style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">VIEW ALL</a>
+                        </div>
+                    </div>
+
+                    <div class="data-panel" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        {% for u in users[:5] %}
+                        <div class="data-item"
+                            style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border);">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <span style="font-family: monospace; color: var(--text-muted);">#{{ u[0] }}</span>
+                                <strong style="font-weight: 600;">{{ u[1] }}</strong>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <span
+                                    style="background: rgba(57, 255, 20, 0.1); color: var(--primary); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">{{
+                                    u[2].upper() }}</span>
+                                {% if u[2] != 'admin' %}
+                                <a href="/admin/unlock/{{ u[1] }}" class="security-btn"
+                                    style="color: var(--primary); font-size: 0.75rem; text-decoration: none; border: 1px solid var(--primary); padding: 0.2rem 0.5rem; border-radius: 4px; transition: all 0.2s;">Unlock</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Files Card -->
+                <div class="kx-card">
+                    <div class="kx-card-header">
+                        <h3 style="margin: 0;">📁 Global Assets</h3>
+                        <div class="kx-actions-group">
+                            <a href="/admin/files"
+                                style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">BROWSE</a>
+                        </div>
+                    </div>
+
+                    <div class="data-panel" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        {% for f in files[:5] %}
+                        <div class="data-item"
+                            style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px dashed var(--border);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <strong
+                                    style="font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
+                                    f.filename }}</strong>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">{{ "%.1f
+                                    KB"|format(f.size/1024) if f.size else "0 KB" }}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--primary);">OWNER: {{ f.username }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="kx-card kx-fade-in" style="animation-delay: 0.2s;">
+                <div style="display: flex; align-items: center; gap: 2rem;">
+                    <div style="flex: 1;">
+                        <h3 style="margin-bottom: 0.5rem;">System Health</h3>
+                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">Encryption cores active.
+                            Firewall monitoring established.</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <a href="/admin/security"
+                            style="background: var(--primary); color: var(--bg-primary); padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.8rem;">AUDIT
+                            LOGS</a>
+                        <a href="/logout"
+                            style="border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.8rem;">SHUTDOWN
+                            SESSION</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - Professional Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Pro Portal</span>
+        </div>
+
+        <div class="nav-actions">
+            <div class="kx-user-pill hide-mobile">
+                <span style="color: var(--primary);">PRO</span>
+                <span>{{ session['user'] }}</span>
+            </div>
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="#" class="nav-link-kx active">📊 Insights</a></li>
+                <li><a href="javascript:void(0)" onclick="openUploadModal()" class="nav-link-kx">📤 Upload File</a></li>
+                <li><a href="/settings" class="nav-link-kx">⚙️ Settings</a></li>
+                <li><a href="/mfa/setup" class="nav-link-kx">🛡️ Enable MFA</a></li>
+                <li><a href="/trash" class="nav-link-kx">🗑️ Secure Trash</a></li>
+                <li><a href="/security-timeline" class="nav-link-kx">🛡️ Audit Log</a></li>
+                <li><a href="/logout" class="nav-link-kx kx-error-link">🚪 Logout</a></li>
+            </ul>
+
+            <div
+                style="margin-top: auto; padding: 1.5rem; background: rgba(57, 255, 20, 0.05); border-radius: 16px; border: 1px solid rgba(57, 255, 20, 0.1);">
+                <h4
+                    style="color: var(--primary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.75rem;">
+                    Storage Quota</h4>
+                <div class="storage-bar"
+                    style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem;">
+                    <div class="storage-fill"
+                        style="width: {{ stats.storage_percentage }}%; background: var(--primary); height: 100%;"></div>
+                </div>
+                <div
+                    style="font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>{{ "%.1f"|format(stats.storage_percentage) }}% Used</span>
+                    <span>{{ "%.0f"|format(stats.storage_quota/1024/1024) }}MB</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>Professional Control</h1>
+                    <p style="color: var(--text-secondary);">Advanced data management for {{ session['user'] }}</p>
+                </div>
+            </header>
+
+            <div class="kx-grid kx-fade-in" style="animation-delay: 0.1s;">
+                <div class="kx-card">
+                    <h3>📈 Quick Stats</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div
+                            style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{ stats.file_count
+                                }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Total Files</div>
+                        </div>
+                        <div
+                            style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{
+                                "%.1f"|format(stats.storage_used/1024/1024) }}MB</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Storage Used</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kx-card">
+                    <h3>🕒 Recent Activity</h3>
+                    <div style="font-size: 0.9rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                            <span>Total movements</span>
+                            <span style="color: var(--primary);">{{ stats.recent_activity }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                            <span>Active sessions</span>
+                            <span style="color: var(--primary);">1</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Action Toolbar -->
+            <div id="bulkToolbar"
+                style="display: none; background: var(--primary); color: var(--bg-primary); padding: 1rem 2rem; border-radius: 12px; margin-bottom: 2rem; align-items: center; justify-content: space-between; animation: slideIn 0.3s ease;">
+                <div style="font-weight: 700;"><span id="selectedCount">0</span> selected</div>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="bulkDeleteBtn"
+                        style="background: var(--bg-primary); color: var(--error); border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer;">TRASH
+                        SELECTED</button>
+                    <button id="bulkDownloadBtn"
+                        style="background: var(--bg-primary); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer;">DOWNLOAD
+                        ZIP</button>
+                    <button onclick="deselectAll()"
+                        style="background: transparent; color: var(--bg-primary); border: 1px solid var(--bg-primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">CANCEL</button>
+                </div>
+            </div>
+
+            <div class="kx-card kx-fade-in" style="animation-delay: 0.2s;">
+                <div class="kx-card-header">
+                    <h2 style="margin: 0; font-size: 1.5rem;">📁 Enterprise File Manager</h2>
+                    <div class="kx-actions-group">
+                        <input type="text" id="searchInput" oninput="searchFiles()" placeholder="Search files..."
+                            class="kx-search-input">
+                        <button onclick="openUploadModal()"
+                            style="background: var(--primary); color: var(--bg-primary); border: none; padding: 0.5rem 1.5rem; border-radius: 8px; font-weight: 700; cursor: pointer;">+
+                            UPLOAD</button>
+                    </div>
+                </div>
+
+                <div class="kx-table-wrapper">
+                    <table class="kx-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAll"
+                                        onclick="toggleAllFiles(this)"></th>
+                                <th>NAME</th>
+                                <th>SIZE</th>
+                                <th class="hide-mobile">DATE</th>
+                                <th class="hide-mobile">DOWNLOADS</th>
+                                <th style="text-align: right;">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileTableBody">
+                            {% for file in files %}
+                            <tr class="file-row" data-file-id="{{ file.id }}">
+                                <td><input type="checkbox" class="file-select" value="{{ file.id }}"
+                                        onclick="updateBulkToolbar()"></td>
+                                <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <span style="font-size: 1.2rem;">📄</span>
+                                    <div style="overflow: hidden; text-overflow: ellipsis;">{{ file.original_name }}
+                                    </div>
+                                </td>
+                                <td>{{ "%.1f KB"|format(file.file_size/1024) if file.file_size else "0 KB" }}</td>
+                                <td class="hide-mobile">{{ file.upload_date.split('.')[0] if file.upload_date else 'N/A'
+                                    }}</td>
+                                <td class="hide-mobile">{{ file.download_count or 0 }}</td>
+                                <td style="text-align: right;">
+                                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                                        <button data-id="{{ file.id }}" data-name="{{ file.original_name }}"
+                                            class="action-btn-sm version-kx-btn" title="Version History">🕒</button>
+                                        <button data-id="{{ file.id }}" data-name="{{ file.original_name }}"
+                                            class="action-btn-sm share-kx-btn" title="Share Securely">🔗</button>
+                                        <a href="/download/{{ file.id }}" class="action-btn-sm" title="Download">⬇️</a>
+                                        <form action="/delete/{{ file.id }}" method="POST" style="display:inline;"
+                                            class="delete-kx-form">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="action-btn-sm" style="color: var(--error);"
+                                                title="Permanently Delete">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not files %}
+                            <tr>
+                                <td colspan="5" style="padding: 3rem; text-align: center; color: var(--text-muted);">No
+                                    documents found in enterprise storage.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="modal-content kx-card" style="width: 100%; max-width: 600px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3>Professional Secure Upload</h3>
+                <span class="close" onclick="closeModal('uploadModal')"
+                    style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+            </div>
+
+            <form action="/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="upload-zone" id="uploadZone"
+                    style="border: 2px dashed var(--border); border-radius: 16px; padding: 3rem; text-align: center; background: rgba(255,255,255,0.02);">
+                    <div class="upload-content">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📤</div>
+                        <h4 style="margin-bottom: 0.5rem;">Drag & Drop High-Security Files</h4>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Maximum performance encryption will
+                            be applied</p>
+                        <input type="file" id="fileInput" name="file" multiple style="display: none;">
+                        <button type="button" onclick="document.getElementById('fileInput').click()"
+                            style="background: var(--primary); color: var(--bg-primary); border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 700; cursor: pointer;">SELECT
+                            ASSETS</button>
+                    </div>
+                </div>
+                <div id="uploadProgressContainer" style="display: none; margin-top: 1.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                        <span id="progressStatus" style="color: var(--primary);">Preparing...</span>
+                        <span id="progressPercent" style="color: var(--text-muted);">0%</span>
+                    </div>
+                    <div class="progress-bar-kx"
+                        style="height: 6px; background: rgba(57, 255, 20, 0.1); border-radius: 10px; overflow: hidden; border: 1px solid rgba(57, 255, 20, 0.1);">
+                        <div id="progressFill"
+                            style="width: 0%; background: var(--primary); height: 100%; transition: width 0.3s ease; box-shadow: 0 0 10px var(--primary);">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fileQueue" class="file-queue"></div>
+
+                <div class="modal-footer"
+                    style="padding: 1.5rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); margin-top: 1rem;">
+                    <button type="submit" id="uploadBtn"
+                        style="display: none; width: 100%; background: var(--primary); border: none; color: var(--bg-primary); padding: 1.25rem; border-radius: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.15em; transition: all 0.3s ease; box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); display: flex; align-items: center; justify-content: center; gap: 0.75rem; animation: pulse-neon 2s infinite;">
+                        <span>INITIATE SECURE UPLOAD</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+    <script src="{{ url_for('static', filename='professional.js') }}"></script>
+    <!-- Version History Modal -->
+    <div id="versionModal" class="modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="modal-content kx-card" style="max-width: 550px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3>🕒 Version History</h3>
+                <span class="close" onclick="closeModal('versionModal')"
+                    style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+            </div>
+
+            <p style="margin-bottom: 1.5rem; color: var(--text-muted);">History for <strong id="versionFileName"
+                    style="color: white;"></strong></p>
+
+            <div id="versionList" style="max-height: 300px; overflow-y: auto; margin-bottom: 2rem;">
+                <!-- Versions will be loaded here -->
+            </div>
+
+            <button onclick="closeModal('versionModal')" class="action-btn"
+                style="width: 100%; background: transparent; border: 1px solid var(--border);">CLOSE</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="modal-content kx-card" style="max-width: 450px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3>🛡️ Secure Sharing</h3>
+                <span class="close" onclick="closeModal('shareModal')"
+                    style="cursor: pointer; font-size: 1.5rem;">&times;</span>
+            </div>
+
+            <div id="shareSetup">
+                <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Creating a self-destructing link for <strong
+                        id="shareFileName" style="color: white;"></strong></p>
+
+                <div class="form-group-kx" style="margin-bottom: 1.5rem;">
+                    <label>Expiration (Hours)</label>
+                    <input type="number" id="shareHours" value="24" min="1" max="168" class="kx-input">
+                </div>
+
+                <div class="form-group-kx" style="margin-bottom: 2rem;">
+                    <label>Download Limit</label>
+                    <input type="number" id="shareLimit" value="5" min="1" max="100" class="kx-input">
+                </div>
+
+                <button onclick="generateShareLink()" class="auth-btn" style="width: 100%;">GENERATE SECURE
+                    LINK</button>
+            </div>
+
+            <div id="shareResult" style="display: none;">
+                <p style="margin-bottom: 1rem; color: var(--primary);">Secure link generated successfully!</p>
+                <div
+                    style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); word-break: break-all; margin-bottom: 1.5rem;">
+                    <code id="finalShareLink" style="font-size: 0.85rem;"></code>
+                </div>
+                <button onclick="copyShareLink()" class="action-btn" style="width: 100%; margin-bottom: 1rem;">COPY
+                    LINK</button>
+                <button onclick="closeModal('shareModal')" class="action-btn"
+                    style="width: 100%; background: transparent; border: 1px solid var(--border);">DONE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentShareFileId = null;
+
+        function openUploadModal() {
+            document.getElementById('uploadModal').style.display = 'flex';
+        }
+
+        function shareFile(fileId, fileName) {
+            currentShareFileId = fileId;
+            document.getElementById('shareFileName').innerText = fileName;
+            document.getElementById('shareSetup').style.display = 'block';
+            document.getElementById('shareResult').style.display = 'none';
+            document.getElementById('shareModal').style.display = 'flex';
+        }
+
+        function toggleAllFiles(master) {
+            const boxes = document.querySelectorAll('.file-select');
+            boxes.forEach(b => b.checked = master.checked);
+            updateBulkToolbar();
+        }
+
+        function updateBulkToolbar() {
+            const selected = document.querySelectorAll('.file-select:checked');
+            const toolbar = document.getElementById('bulkToolbar');
+            const count = document.getElementById('selectedCount');
+
+            if (selected.length > 0) {
+                toolbar.style.display = 'flex';
+                count.innerText = selected.length;
+            } else {
+                toolbar.style.display = 'none';
+            }
+        }
+
+        function deselectAll() {
+            document.getElementById('selectAll').checked = false;
+            toggleAllFiles(document.getElementById('selectAll'));
+        }
+
+        async function bulkDelete() {
+            const selected = Array.from(document.querySelectorAll('.file-select:checked')).map(b => b.value);
+            KxUI.confirm(`Move ${selected.length} items to trash?`, async () => {
+                const formData = new FormData();
+                formData.append('file_ids', JSON.stringify(selected));
+                formData.append('csrf_token', '{{ csrf_token() }}');
+
+                try {
+                    const response = await fetch('/bulk/delete', { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        KxUI.success('Bulk move to trash successful');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        KxUI.error('Bulk delete failed: ' + data.message);
+                    }
+                } catch (err) { KxUI.error('Bulk delete failed'); }
+            });
+        }
+
+        async function bulkDownload() {
+            const selected = Array.from(document.querySelectorAll('.file-select:checked')).map(b => b.value);
+            window.location.href = `/bulk/download?ids=${selected.join(',')}`;
+        }
+
+        async function viewVersions(fileId, fileName) {
+            document.getElementById('versionFileName').innerText = fileName;
+            const list = document.getElementById('versionList');
+            list.innerHTML = '<p style="text-align: center;">Loading history...</p>';
+            document.getElementById('versionModal').style.display = 'flex';
+
+            try {
+                const response = await fetch(`/versions/${fileId}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    if (data.versions.length === 0) {
+                        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No previous versions found.</p>';
+                    } else {
+                        list.innerHTML = data.versions.map(v => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); margin-bottom: 0.5rem; border-radius: 8px;">
+                                <div>
+                                    <div style="font-weight: bold; color: var(--primary);">v${v.version}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">${v.date.split('.')[0].replace('T', ' ')}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">${v.desc}</div>
+                                </div>
+                                <button onclick="rollback(${v.id})" class="action-btn-sm" style="font-size: 0.7rem; padding: 0.4rem 0.8rem;">ROLLBACK</button>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (err) {
+                list.innerHTML = '<p style="text-align: center; color: var(--error);">Failed to load versions.</p>';
+            }
+        }
+
+        async function rollback(versionId) {
+            KxUI.confirm('Are you sure you want to restore this older version? The current version will be archived.', async () => {
+                const formData = new FormData();
+                formData.append('csrf_token', '{{ csrf_token() }}');
+
+                try {
+                    const response = await fetch(`/rollback/${versionId}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        KxUI.success('Rollback successful!');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        KxUI.error('Rollback failed: ' + data.message);
+                    }
+                } catch (err) {
+                    KxUI.error('Rollback failed. Please try again.');
+                }
+            });
+        }
+
+        async function generateShareLink() {
+            const hours = document.getElementById('shareHours').value;
+            const limit = document.getElementById('shareLimit').value;
+
+            const formData = new FormData();
+            formData.append('hours', hours);
+            formData.append('max_downloads', limit);
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            try {
+                const response = await fetch(`/share/${currentShareFileId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('finalShareLink').innerText = data.share_url;
+                    document.getElementById('shareSetup').style.display = 'none';
+                    document.getElementById('shareResult').style.display = 'block';
+                    KxUI.success('Secure link generated');
+                } else {
+                    KxUI.error('Sharing failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error generating share link:', err);
+                KxUI.error('Sharing failed. Please try again.');
+            }
+        }
+
+        function copyShareLink() {
+            const link = document.getElementById('finalShareLink').innerText;
+            navigator.clipboard.writeText(link);
+            KxUI.success('Link copied to clipboard!');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        document.querySelectorAll('.version-kx-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewVersions(btn.getAttribute('data-id'), btn.getAttribute('data-name'));
+            });
+        });
+        document.querySelectorAll('.share-kx-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                shareFile(btn.getAttribute('data-id'), btn.getAttribute('data-name'));
+            });
+        });
+        document.querySelectorAll('.delete-kx-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                KxUI.confirm('Securely erase this file?', () => this.submit());
+            });
+        });
+        document.querySelectorAll('.file-row').forEach(row => {
+            row.addEventListener('mouseover', () => row.style.background = 'rgba(57,255,20,0.02)');
+            row.addEventListener('mouseout', () => row.style.background = 'transparent');
+        });
+        document.getElementById('bulkDeleteBtn').addEventListener('click', bulkDelete);
+        document.getElementById('bulkDownloadBtn').addEventListener('click', bulkDownload);
+    </script>
+    <!-- KxUI Components are now handled dynamically by kxui.js -->
+</body>
+
+</html>

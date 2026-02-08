@@ -1,0 +1,5 @@
+Flask
+cryptography
+flask-mail
+werkzeug
+

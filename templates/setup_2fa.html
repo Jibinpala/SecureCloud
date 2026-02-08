@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureCloud - Setup 2FA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    <div class="dashboard-container">
+        <div class="dashboard-box">
+            <div class="header-section">
+                <div class="logo-circle small">
+                    <div class="logo-inner">SC</div>
+                </div>
+                <h1 class="dashboard-title">SETUP 2FA</h1>
+                <p class="user-welcome">Two-Factor Authentication</p>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="tfa-setup">
+                    <div class="step">
+                        <h3>Step 1: Install Authenticator App</h3>
+                        <p>Download Google Authenticator or similar app on your phone</p>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>Step 2: Scan QR Code</h3>
+                        <div class="qr-container">
+                            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code">
+                        </div>
+                        <p>Or manually enter this secret: <code>{{ secret }}</code></p>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>Step 3: Verify Setup</h3>
+                        <form method="POST" action="/verify_2fa">
+                            <div class="input-wrapper">
+                                <input type="text" name="token" placeholder="Enter 6-digit code" required maxlength="6">
+                            </div>
+                            <button type="submit" class="verify-btn">VERIFY & ENABLE</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-footer">
+                <a href="/dashboard" class="back-btn">← SKIP FOR NOW</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox Trash - Asset Recovery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}?v=3">
+    <style>
+        .trash-container {
+            max-width: 1100px;
+            /* Increased width */
+            margin: 4rem auto;
+            padding: 0 1rem;
+        }
+
+        .trash-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            /* Consistently rounded */
+            padding: 2.5rem;
+            /* More breathing room */
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .purge-btn {
+            color: var(--error);
+            border: 1px solid var(--error);
+            background: transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .purge-btn:hover {
+            background: var(--error);
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.3);
+        }
+
+        .restore-btn {
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            background: transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-right: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .restore-btn:hover {
+            background: var(--primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+        }
+
+        .top-nav {
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            background: rgba(10, 10, 10, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-circle-sm {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+            box-shadow: 0 0 10px var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Trash</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/dashboard" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/dashboard" class="nav-link-kx">📊 Portal Main</a></li>
+                <li><a href="/security-timeline" class="nav-link-kx">🛡️ Audit Log</a></li>
+                <li><a href="/settings" class="nav-link-kx">⚙️ Settings</a></li>
+                <li><a href="/trash" class="nav-link-kx active">🗑️ Secure Trash</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-kx">
+            <div class="trash-container kx-fade-in" style="margin-top: 0; padding-top: 1rem;">
+                <div class="trash-card">
+                    <div class="kx-card-header">
+                        <div style="text-align: left;">
+                            <h2 style="margin: 0; font-size: 1.75rem; color: var(--text-primary);">🗑️ Recover Assets
+                            </h2>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Items pending
+                                permanent erasure protocol</p>
+                        </div>
+                        <div class="kx-actions-group">
+                            <p
+                                style="color: var(--primary); font-size: 0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.1em; background: rgba(57, 255, 20, 0.1); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid rgba(57, 255, 20, 0.2); margin: 0;">
+                                Retention: 30 Days
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="kx-table-wrapper">
+                        <table class="kx-table">
+                            <thead>
+                                <tr>
+                                    <th>Asset Name</th>
+                                    <th class="hide-mobile">Size</th>
+                                    <th>Deleted On</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if files %}
+                                {% for file in files %}
+                                <tr class="trash-row">
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <span style="font-size: 1.25rem;">📄</span>
+                                            <span style="font-weight: 500; color: white;">{{ file.name or
+                                                file.original_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="hide-mobile" style="color: var(--text-muted);">{{ "%.1f
+                                        KB"|format((file.size or file.file_size)/1024) if (file.size or file.file_size)
+                                        else "0 KB" }}</td>
+                                    <td style="color: var(--text-muted);">{{ (file.date or
+                                        file.upload_date).split('.')[0] }}</td>
+                                    <td style="text-align: right;">
+                                        <button data-id="{{ file.id }}"
+                                            class="restore-kx-btn restore-btn">RESTORE</button>
+                                        <button data-id="{{ file.id }}" class="purge-kx-btn purge-btn">ERASE</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4"
+                                        style="padding: 5rem; text-align: center; color: var(--text-muted);">
+                                        <div style="font-size: 3rem; margin-bottom: 1rem;">✨</div>
+                                        <div style="font-size: 1.1rem; font-weight: 600;">Secure Trash is Empty</div>
+                                        <p style="font-size: 0.85rem; margin-top: 0.5rem;">All systems are nominal.</p>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+    <script>
+        async function restoreAsset(id) {
+            KxUI.confirm('Restore this asset to active primary storage?', async () => {
+                const formData = new FormData();
+                formData.append('csrf_token', '{{ csrf_token() }}');
+
+                try {
+                    const response = await fetch(`/trash/restore/${id}`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        KxUI.success('Asset successfully restored');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        KxUI.error('Restoration failed: ' + data.message);
+                    }
+                } catch (err) { KxUI.error('Network protocol error during restore'); }
+            });
+        }
+
+        async function purgeAsset(id) {
+            KxUI.confirm('CRITICAL: Permanently erase asset and all versions? This cannot be undone.', async () => {
+                const formData = new FormData();
+                formData.append('csrf_token', '{{ csrf_token() }}');
+
+                try {
+                    const response = await fetch(`/trash/purge/${id}`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        KxUI.success('Asset permanently erased');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        KxUI.error('Erasure protocol failed: ' + data.message);
+                    }
+                } catch (err) { KxUI.error('Network protocol error during erasure'); }
+            });
+        }
+        document.querySelectorAll('.restore-kx-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                restoreAsset(btn.getAttribute('data-id'));
+            });
+        });
+        document.querySelectorAll('.purge-kx-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                purgeAsset(btn.getAttribute('data-id'));
+            });
+        });
+    </script>
+</body>
+
+</html>

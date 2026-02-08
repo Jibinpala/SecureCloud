@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+secret.key
+
+# Database
+database/*.db
+db_audit.log
+audit.log
+
+# User Data
+encrypted_files/
+backups/
+
+# Debug/Temp
+dump_sessions.py
+repro_multi.py
+test_*.py
+audit_*.py
+check_*.py
+debug_*.py
+full_*.py
+list_*.py
+migrate_*.py
+schema_*.txt
+*.txt
+*.log
+!requirements*.txt
+!PRIVACY.md
+!TODO.md
+
+# IDE
+.vscode/
+.idea/

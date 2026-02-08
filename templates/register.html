@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - Register</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}?v=2">
+    <style>
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 440px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem 2.5rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .logo-circle {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin: 0.25rem 0;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin: 0;
+        }
+
+        .error-panel {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-msg {
+            color: var(--error);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .eye-toggle {
+            position: absolute;
+            right: 0.75rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .eye-toggle:hover {
+            color: var(--primary);
+        }
+
+        .password-requirements {
+            background: rgba(57, 255, 20, 0.05);
+            border: 1px solid rgba(57, 255, 20, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            margin-top: -0.5rem;
+        }
+
+        .password-requirements p {
+            margin: 0 0 0.4rem 0;
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .password-requirements ul {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.25rem 1rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .password-requirements li {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .password-requirements li i {
+            font-style: normal;
+            font-size: 0.8rem;
+            opacity: 0.3;
+        }
+
+        .password-requirements li.valid {
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+        }
+
+        .password-requirements li.valid i {
+            opacity: 1;
+        }
+
+        .login-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--gradient);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-glow {
+            display: none;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .footer-links a {
+            font-size: 0.875rem;
+            color: var(--primary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-weight: 500;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 1.5rem;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .logo-circle {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo-section">
+                <div class="logo-circle">
+                    <div class="logo-inner">KX</div>
+                </div>
+                <h1 class="title">Create Account</h1>
+                <p class="subtitle">Secure Registration</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="error-panel">
+                {% for msg in messages %}
+                <div class="error-msg">⚠ {{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="login-form" id="registerForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label
+                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="username" placeholder="Choose ID" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label
+                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Email</label>
+                        <div class="input-wrapper">
+                            <input type="email" name="email" placeholder="Contact link" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label
+                        style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Security
+                        Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="reg-password" name="password" placeholder="Create strong key"
+                            required minlength="8">
+                        <span class="eye-toggle" id="reg-toggle-icon" onclick="toggleRegPassword()">👁</span>
+                    </div>
+                </div>
+
+                <div class="password-requirements">
+                    <p>Security Protocols:</p>
+                    <ul id="requirementsList">
+                        <li id="req-length"><i>○</i> 8+ Char</li>
+                        <li id="req-upper"><i>○</i> Upper</li>
+                        <li id="req-lower"><i>○</i> Lower</li>
+                        <li id="req-number"><i>○</i> Digit</li>
+                        <li id="req-special"><i>○</i> Symbol</li>
+                    </ul>
+                </div>
+
+                <div class="input-group"
+                    style="flex-direction: row; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+                    <input type="checkbox" id="terms" required style="width: auto; margin: 0;">
+                    <label for="terms" style="font-size: 0.7rem; color: var(--text-muted); cursor: pointer;">
+                        I accept the <a href="/privacy" target="_blank"
+                            style="color: var(--primary); text-decoration: underline;">Privacy Policy</a> and Protocol
+                        Terms
+                    </label>
+                </div>
+
+                <button type="submit" class="login-btn">Protocol Initialization</button>
+            </form>
+
+            <div class="footer-links">
+                <a href="{{ url_for('login') }}">← Back to Login Portal</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+
+    <script>
+        function toggleRegPassword() {
+            const passwordInput = document.getElementById('reg-password');
+            const toggleIcon = document.getElementById('reg-toggle-icon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🔒';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁';
+            }
+        }
+
+        const passwordInput = document.getElementById('reg-password');
+        const requirements = {
+            length: document.getElementById('req-length'),
+            upper: document.getElementById('req-upper'),
+            lower: document.getElementById('req-lower'),
+            number: document.getElementById('req-number'),
+            special: document.getElementById('req-special')
+        };
+
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+
+            const checks = {
+                length: val.length >= 8,
+                upper: /[A-Z]/.test(val),
+                lower: /[a-z]/.test(val),
+                number: /[0-9]/.test(val),
+                special: /[^A-Za-z0-9]/.test(val)
+            };
+
+            for (const key in checks) {
+                if (checks[key]) {
+                    requirements[key].classList.add('valid');
+                    requirements[key].querySelector('i').textContent = '●';
+                } else {
+                    requirements[key].classList.remove('valid');
+                    requirements[key].querySelector('i').textContent = '○';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Kryox Secure Cloud",
+  "short_name": "Kryox",
+  "description": "Enterprise-grade secure cloud storage with end-to-end encryption.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b10",
+  "theme_color": "#39ff14",
+  "icons": [
+    {
+      "src": "/static/kryox_app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

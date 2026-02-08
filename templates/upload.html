@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Upload</title>
+</head>
+<body>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for msg in messages %}
+      <p style="color:red;">{{ msg }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<h2>📁 Secure File Upload</h2>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" required><br><br>
+    <button type="submit">Encrypt & Upload</button>
+</form>
+
+{% for message in get_flashed_messages() %}
+<p style="color:green;">{{ message }}</p>
+{% endfor %}
+
+<br>
+<a href="/dashboard">Back to Dashboard</a>
+
+</body>
+</html>

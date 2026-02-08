@@ -1,0 +1,16 @@
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for msg in messages %}
+      <p style="color:red;">{{ msg }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<div class="card">
+<h2>OTP Verification</h2>
+<form method="POST">
+<input name="otp" required placeholder="Enter OTP">
+<button>Verify</button>
+</form>
+</div>

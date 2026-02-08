@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kryox - Master Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#39ff14">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/service-worker.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='additional.css') }}">
+</head>
+
+<body>
+    <div class="matrix-bg"></div>
+
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <button class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Toggle Navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo-circle small">
+                <div class="logo-inner">KX</div>
+            </div>
+            <span class="brand-text">Kryox Admin</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/logout" class="nav-btn logout">🚪</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar-kx">
+            <ul class="nav-menu-kx">
+                <li><a href="/admin" class="nav-link-kx">📊 Command Center</a></li>
+                <li><a href="/admin/users" class="nav-link-kx">👥 Users</a></li>
+                <li><a href="/admin/files" class="nav-link-kx active">📁 Master Files</a></li>
+                <li><a href="/admin/security" class="nav-link-kx">🔒 Security Logs</a></li>
+                <li style="margin-top: auto;"><a href="/logout" class="nav-link-kx" style="color: var(--error);">🚪
+                        Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-kx">
+            <header class="kx-header kx-fade-in">
+                <div>
+                    <h1>Master File Management</h1>
+                    <p style="color: var(--text-secondary);">Global asset monitoring and control</p>
+                </div>
+                <div class="kx-user-pill hide-mobile" style="border-color: var(--primary);">
+                    <span style="color: var(--primary);">★</span>
+                    <span>Admin: {{ session.get('user', 'admin') }}</span>
+                </div>
+            </header>
+
+            <div class="kx-grid kx-fade-in" style="animation-delay: 0.1s;">
+                <div class="kx-card" style="grid-column: span 2;">
+                    <div class="kx-card-header">
+                        <h3 style="margin: 0;">🔒 Encrypted Assets</h3>
+                        <div class="kx-actions-group">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                TOTAL FILES: {{ files|length }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kx-table-wrapper">
+                        <table class="kx-table">
+                            <thead>
+                                <tr>
+                                    <th>OWNER</th>
+                                    <th>FILENAME</th>
+                                    <th class="hide-mobile">SIZE</th>
+                                    <th style="text-align: right;">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for f in files %}
+                                <tr>
+                                    <td><strong style="color: var(--primary);">{{ f.username }}</strong></td>
+                                    <td
+                                        style="color: white; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">
+                                        {{ f.filename }}</td>
+                                    <td class="hide-mobile" style="color: var(--text-muted);">{{ "%.1f
+                                        KB"|format(f.size/1024) if f.size else "0 KB" }}</td>
+                                    <td style="text-align: right;">
+                                        <span
+                                            style="background: rgba(57, 255, 20, 0.1); color: var(--primary); padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">ENCRYPTED</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not files %}
+                    <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                        No assets detected in global storage.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="kx-card kx-fade-in" style="margin-top: 2rem; border-left: 4px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin-bottom: 0.25rem;">Storage Analytics</h4>
+                        <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">
+                            Total Global Volume: {{ "%.1f MB"|format(files|map(attribute='size')|sum / (1024*1024)) if
+                            files else "0 MB" }}
+                        </p>
+                    </div>
+                    <button class="nav-link-kx" onclick="window.location.reload()"
+                        style="padding: 0.5rem 1.5rem;">REFRESH DATA</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='kxui.js') }}"></script>
+</body>
+
+</html>
