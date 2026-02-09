@@ -231,7 +231,7 @@ def init_unified_db():
     )""")
     
 
-init_unified_db()
+# init_unified_db() call moved to __main__ for stability with reloader
 
 # --- Helpers ---
 
@@ -286,20 +286,20 @@ def login():
             (username,), fetch_one=True
         )
 
-        if result and check_password_hash(result[1], password):
+        if result and check_password_hash(result['password'], password):
             # Check MFA
-            if result[3]: # mfa_enabled
+            if result.get('mfa_enabled'): # mfa_enabled
                 session["mfa_pending_user"] = username
                 session["mfa_pending_user_data"] = {
-                    "role": result[2],
-                    "plan": result[4] if len(result) > 4 else 'free'
+                    "role": result['role'],
+                    "plan": result.get('plan', 'free')
                 }
                 return redirect(url_for('mfa_verify_challenge'))
             
             session_id = secrets.token_hex(32)
             session["user"] = username
-            session["role"] = result[2]
-            session["plan"] = result[4] if len(result) > 4 else 'free'
+            session["role"] = result['role']
+            session["plan"] = result.get('plan', 'free')
             session["session_id"] = session_id
             session.permanent = True
             
@@ -346,8 +346,13 @@ def register():
             security_manager.log_security_event(username, ip_address, "REGISTRATION", "SUCCESS", f"User registered with email {email}")
             flash("Registration successful! Please login.")
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
-            flash("Username already exists")
+        except Exception as e:
+            # Handle unique constraint violations for both SQLite and Postgres
+            error_msg = str(e).lower()
+            if "unique" in error_msg or "already exists" in error_msg:
+                flash("Username already exists")
+            else:
+                flash(f"Registration error: {e}")
             return redirect(url_for('register'))
             
     return render_template("register.html")
@@ -420,7 +425,7 @@ def change_password():
     
     row = db_manager.execute_query("SELECT password FROM users WHERE username=?", (username,), fetch_one=True)
     
-    if row and check_password_hash(row[0], current_pw):
+    if row and check_password_hash(row['password'], current_pw):
         is_strong, msg = security_manager.validate_password_strength(new_pw)
         if not is_strong:
             flash(msg)
@@ -473,12 +478,12 @@ def mfa_setup():
     # Check if already enabled
     row = db_manager.execute_query("SELECT totp_secret, mfa_enabled FROM users WHERE username=?", (username,), fetch_one=True)
     
-    if row and row[1]:
+    if row and row.get('mfa_enabled'):
         flash("MFA is already enabled.")
         return redirect(url_for('professional_dashboard'))
     
-    secret = row[0] if row and row[0] else mfa_manager.generate_secret()
-    if not row or not row[0]:
+    secret = row['totp_secret'] if row and row.get('totp_secret') else mfa_manager.generate_secret()
+    if not row or not row.get('totp_secret'):
         db_manager.execute_query("UPDATE users SET totp_secret=? WHERE username=?", (secret, username))
     
     uri = mfa_manager.get_provisioning_uri(username, secret)
@@ -497,7 +502,7 @@ def mfa_verify_challenge():
         
         row = db_manager.execute_query("SELECT totp_secret FROM users WHERE username=?", (username,), fetch_one=True)
         
-        if row and mfa_manager.verify_token(row[0], token):
+        if row and mfa_manager.verify_token(row['totp_secret'], token):
             # Success! Complete login
             user_data = session.pop("mfa_pending_user_data")
             session_id = secrets.token_hex(32)
@@ -531,7 +536,7 @@ def mfa_verify_backup():
     
     if row:
         # Mark as used
-        db_manager.execute_query("UPDATE mfa_backup_codes SET used=1 WHERE id=?", (row[0],))
+        db_manager.execute_query("UPDATE mfa_backup_codes SET used=1 WHERE id=?", (row['id'],))
         
         # Success! Complete login
         user_data = session.pop("mfa_pending_user_data")
@@ -582,13 +587,7 @@ def update_storage_usage(username, bytes_added):
 @csrf_protect
 def mfa_revoke_backup_codes():
     username = session["user"]
-    
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
-    conn.commit()
-    conn.close()
-    
+    db_manager.execute_query("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
     security_manager.log_security_event(username, request.remote_addr, "MFA_BACKUP_CODES_REVOKED", "SUCCESS", "Revoked all backup codes")
     return jsonify({"status": "success", "message": "All recovery protocols revoked"})
 
@@ -599,15 +598,11 @@ def mfa_enable():
     token = request.form.get("token", "").strip()
     username = session["user"]
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT totp_secret FROM users WHERE username=?", (username,))
-    row = c.fetchone()
+    row = db_manager.execute_query("SELECT totp_secret FROM users WHERE username=?", (username,), fetch_one=True)
+    secret = row['totp_secret'] if row else None
     
-    if row and mfa_manager.verify_token(row[0], token):
-        c.execute("UPDATE users SET mfa_enabled=1 WHERE username=?", (username,))
-        conn.commit()
-        conn.close()
+    if secret and mfa_manager.verify_token(secret, token):
+        db_manager.execute_query("UPDATE users SET mfa_enabled=1 WHERE username=?", (username,))
         security_manager.log_security_event(username, request.remote_addr, "MFA_ENABLED", "SUCCESS", "MFA enabled successfully")
         flash("MFA enabled successfully!", "success")
         return redirect(url_for('dashboard'))
@@ -796,7 +791,7 @@ def share_file(file_id):
 @app.route("/s/<token>")
 def public_access(token):
     link = db_manager.execute_query(
-        "SELECT sl.*, d.filename, d.original_name, d.mime_type FROM shared_links sl JOIN documents d ON sl.file_id = d.id WHERE sl.token=?",
+        "SELECT sl.*, d.filename, d.original_name, d.mimetype as mime_type FROM shared_links sl JOIN documents d ON sl.document_id = d.id WHERE sl.token=?",
         (token,), fetch_one=True
     )
     
@@ -804,11 +799,11 @@ def public_access(token):
         abort(404, description="Link not found")
     
     # Check expiration
-    if datetime.now() > datetime.fromisoformat(link[3]): # expires_at
+    if datetime.now() > datetime.fromisoformat(link['expires_at']): # expires_at
         abort(410, description="Link expired (time)")
         
     # Check downloads
-    if link[5] >= link[4]: # current vs max
+    if link['current_downloads'] >= link['max_downloads']: # current vs max
         abort(410, description="Link expired (download limit reached)")
         
     # Update count
@@ -825,8 +820,8 @@ def public_access(token):
     
     return Response(
         decrypted_data,
-        mimetype=link[9],
-        headers={"Content-disposition": f"attachment; filename={link[8]}"}
+        mimetype=link['mime_type'],
+        headers={"Content-disposition": f"attachment; filename={link['original_name']}"}
     )
 
 @app.route("/versions/<int:file_id>")
@@ -963,7 +958,7 @@ def trash_view():
         (username,), fetch_all=True
     )
     # Convert tuples to dicts for template
-    trash_files = [{"id": f[0], "name": f[1], "size": f[2], "date": f[3]} for f in files]
+    trash_files = [{"id": f['id'], "name": f['original_name'], "size": f['file_size'], "date": f['upload_date']} for f in files]
     return render_template("trash.html", files=trash_files)
 
 @app.route("/trash/restore/<int:file_id>", methods=["POST"])
@@ -1027,7 +1022,7 @@ def admin_users_route():
     users = get_all_users()
     user_status = {}
     for u in users:
-        username = u[1]
+        username = u['username']
         user_status[username] = {
             'suspended': security_manager.is_account_suspended(username),
             'locked': security_manager.is_account_locked(username)
@@ -1090,9 +1085,9 @@ def get_user_info(username):
     return {'username': username, 'plan': 'free', 'storage_used': 0}
 
 def get_user_files_with_metadata(username):
-    with db_manager.get_connection() as conn:
-        c = conn.execute("SELECT * FROM documents WHERE username=? AND status='active' ORDER BY upload_date DESC", (username,))
-        return [dict(row) for row in c.fetchall()]
+    with db_manager.get_connection() as (conn, cursor):
+        cursor.execute("SELECT * FROM documents WHERE username=? AND status='active' ORDER BY upload_date DESC", (username,))
+        return [dict(row) for row in cursor.fetchall()]
 
 def get_user_statistics(username):
     info = get_user_info(username)
@@ -1187,9 +1182,12 @@ def approve_document(workflow_id):
 def page_not_found(e):
     return render_template('404.html'), 404
 
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
+# @app.errorhandler(500)
+# def internal_server_error(e):
+#     return render_template('500.html'), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    init_unified_db()
+    print("SecureCloud is initializing on http://127.0.0.1:5000")
+    # Enable debug but disable reloader to avoid Windows restart loop
+    app.run(debug=True, use_reloader=False, host='127.0.0.1', port=5000)
