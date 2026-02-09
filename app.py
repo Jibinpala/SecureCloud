@@ -281,11 +281,10 @@ def login():
             return redirect(url_for('login'))
         
         # Modified logic for login and MFA check
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT username, password, role, mfa_enabled, plan FROM users WHERE username=?", (username,))
-        result = c.fetchone()
-        conn.close()
+        result = db_manager.execute_query(
+            "SELECT username, password, role, mfa_enabled, plan FROM users WHERE username=?", 
+            (username,), fetch_one=True
+        )
 
         if result and check_password_hash(result[1], password):
             # Check MFA
@@ -419,11 +418,7 @@ def change_password():
     new_pw = request.form.get("new_password", "")
     username = session["user"]
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT password FROM users WHERE username=?", (username,))
-    row = c.fetchone()
-    conn.close()
+    row = db_manager.execute_query("SELECT password FROM users WHERE username=?", (username,), fetch_one=True)
     
     if row and check_password_hash(row[0], current_pw):
         is_strong, msg = security_manager.validate_password_strength(new_pw)
@@ -476,10 +471,7 @@ def otp():
 def mfa_setup():
     username = session["user"]
     # Check if already enabled
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT totp_secret, mfa_enabled FROM users WHERE username=?", (username,))
-    row = c.fetchone()
+    row = db_manager.execute_query("SELECT totp_secret, mfa_enabled FROM users WHERE username=?", (username,), fetch_one=True)
     
     if row and row[1]:
         flash("MFA is already enabled.")
@@ -487,9 +479,7 @@ def mfa_setup():
     
     secret = row[0] if row and row[0] else mfa_manager.generate_secret()
     if not row or not row[0]:
-        c.execute("UPDATE users SET totp_secret=? WHERE username=?", (secret, username))
-        conn.commit()
-    conn.close()
+        db_manager.execute_query("UPDATE users SET totp_secret=? WHERE username=?", (secret, username))
     
     uri = mfa_manager.get_provisioning_uri(username, secret)
     qr_code = mfa_manager.generate_qr_base64(uri)
@@ -505,11 +495,7 @@ def mfa_verify_challenge():
         token = request.form.get("token", "").strip()
         username = session["mfa_pending_user"]
         
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT totp_secret FROM users WHERE username=?", (username,))
-        row = c.fetchone()
-        conn.close()
+        row = db_manager.execute_query("SELECT totp_secret FROM users WHERE username=?", (username,), fetch_one=True)
         
         if row and mfa_manager.verify_token(row[0], token):
             # Success! Complete login
@@ -541,16 +527,11 @@ def mfa_verify_backup():
     # Hash and check against DB
     code_hash = mfa_manager.hash_code(backup_code)
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id FROM mfa_backup_codes WHERE username=? AND code_hash=? AND used=0", (username, code_hash))
-    row = c.fetchone()
+    row = db_manager.execute_query("SELECT id FROM mfa_backup_codes WHERE username=? AND code_hash=? AND used=0", (username, code_hash), fetch_one=True)
     
     if row:
         # Mark as used
-        c.execute("UPDATE mfa_backup_codes SET used=1 WHERE id=?", (row[0],))
-        conn.commit()
-        conn.close()
+        db_manager.execute_query("UPDATE mfa_backup_codes SET used=1 WHERE id=?", (row[0],))
         
         # Success! Complete login
         user_data = session.pop("mfa_pending_user_data")
@@ -578,19 +559,14 @@ def mfa_generate_backup_codes():
     username = session["user"]
     codes = mfa_manager.generate_backup_codes(8)
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
     # Delete old codes
-    c.execute("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
+    db_manager.execute_query("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
     
     # Insert new hashed codes
     for code in codes:
         code_hash = mfa_manager.hash_code(code)
-        c.execute("INSERT INTO mfa_backup_codes (username, code_hash, created_at) VALUES (?, ?, ?)", 
+        db_manager.execute_query("INSERT INTO mfa_backup_codes (username, code_hash, created_at) VALUES (?, ?, ?)", 
                   (username, code_hash, datetime.now().isoformat()))
-    
-    conn.commit()
-    conn.close()
     
     security_manager.log_security_event(username, request.remote_addr, "MFA_BACKUP_CODES_GENERATED", "SUCCESS", "Generated 8 new backup codes")
     return jsonify({"status": "success", "codes": codes})
