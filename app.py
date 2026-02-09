@@ -88,7 +88,10 @@ def init_unified_db():
         ("email", "TEXT"),
         ("email_hash", "TEXT"),
         ("mfa_enabled", "INTEGER DEFAULT 0"),
-        ("suspended", "INTEGER DEFAULT 0")
+        ("suspended", "INTEGER DEFAULT 0"),
+        ("failed_attempts", "INTEGER DEFAULT 0"),
+        ("locked_until", "TEXT"),
+        ("last_login", "TEXT")
     ]
     
     for col_name, col_def in columns:
