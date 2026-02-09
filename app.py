@@ -15,6 +15,7 @@ import io
 import json
 
 # Core Modules
+from config import DATABASE_PATH, UPLOAD_FOLDER, IS_VERCEL
 from auth import init_db, register_user, verify_user, reset_password
 from crypto import encrypt_file, decrypt_file
 from admin import get_all_users, get_all_files
@@ -22,31 +23,24 @@ from security import security_manager, rate_limit
 from mfa_manager import mfa_manager
 from enhanced_security import enhanced_security, csrf_protect, rate_limit_enhanced
 from database_manager import db_manager
+from storage_manager import storage_manager
 from performance_optimizer import (
     cache_manager, file_chunk_manager, async_task_manager, 
     performance_monitor, monitor_performance, cache_result
 )
 
-import os
-from dotenv import load_dotenv
-
-# Initialize early
-load_dotenv()
-
-# Load environment variables
-load_dotenv()
-
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "kryox_enterprise_secure_persistent_key_2026")
-DB_PATH = os.getenv("DATABASE_PATH", "database/users.db")
+DB_PATH = DATABASE_PATH
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config['WTF_CSRF_ENABLED'] = True
 
-BASE_UPLOAD = "encrypted_files/users"
-os.makedirs(BASE_UPLOAD, exist_ok=True)
+BASE_UPLOAD = UPLOAD_FOLDER
+if not IS_VERCEL:
+    os.makedirs(BASE_UPLOAD, exist_ok=True)
 
 # App Configurations
 DOCUMENT_TYPES = ['contract', 'invoice', 'report', 'policy', 'manual', 'other']
@@ -58,17 +52,34 @@ STORAGE_QUOTAS = {
 }
 
 def init_unified_db():
-    """Consolidated database initialization"""
-    init_db()  # Base auth tables
-    security_manager.init_security_db() # Security logs and sessions
+    """Consolidated database initialization using db_manager"""
+    init_db()  # Base auth tables check
     
-    conn = sqlite3.connect("database/users.db")
-    c = conn.cursor()
+    # Professional and DMS columns for users (standard names across dialects)
+    columns = [
+        ("plan", "VARCHAR(20) DEFAULT 'free'"),
+        ("storage_used", "BIGINT DEFAULT 0"),
+        ("totp_secret", "TEXT"),
+        ("mfa_enabled", "INTEGER DEFAULT 0"),
+        ("suspended", "INTEGER DEFAULT 0")
+    ]
     
-    # Professional and DMS columns for users
+    # We use db_manager.execute_query which handles the connection
+    # For migration/init, we'll try standard SQL
+    db_manager.execute_query("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            role TEXT,
+            email TEXT
+        )
+    """)
+    
+    # Professional and DMS columns for users (standard names across dialects)
     columns = [
         ("plan", "TEXT DEFAULT 'free'"),
-        ("storage_used", "INTEGER DEFAULT 0"),
+        ("storage_used", "BIGINT DEFAULT 0"),
         ("api_key", "TEXT"),
         ("organization", "TEXT"),
         ("department", "TEXT"),
@@ -78,25 +89,21 @@ def init_unified_db():
         ("email_hash", "TEXT")
     ]
     
-    c.execute("PRAGMA table_info(users)")
-    existing_users = {row[1] for row in c.fetchall()}
-    
     for col_name, col_def in columns:
-        if col_name not in existing_users:
-            try:
-                c.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
-            except sqlite3.OperationalError:
-                pass
+        try:
+            db_manager.execute_query(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
+        except Exception:
+            pass # Column likely already exists
 
     # DMS Tables Migration
-    c.execute("""CREATE TABLE IF NOT EXISTS documents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
         username TEXT,
         filename TEXT,
         original_name TEXT,
         document_type TEXT,
         department TEXT,
-        file_size INTEGER,
+        file_size BIGINT,
         mime_type TEXT,
         upload_date TEXT,
         last_modified TEXT,
@@ -104,7 +111,7 @@ def init_unified_db():
         status TEXT DEFAULT 'draft',
         tags TEXT,
         description TEXT,
-        approval_required BOOLEAN DEFAULT 0,
+        approval_required INTEGER DEFAULT 0,
         approved_by TEXT,
         approval_date TEXT,
         file_hash TEXT,
@@ -118,26 +125,22 @@ def init_unified_db():
         ("status", "TEXT DEFAULT 'draft'"),
         ("tags", "TEXT"),
         ("description", "TEXT"),
-        ("approval_required", "BOOLEAN DEFAULT 0"),
+        ("approval_required", "INTEGER DEFAULT 0"),
         ("approved_by", "TEXT"),
         ("approval_date", "TEXT"),
         ("file_hash", "TEXT"),
         ("download_count", "INTEGER DEFAULT 0")
     ]
     
-    c.execute("PRAGMA table_info(documents)")
-    existing_docs = {row[1] for row in c.fetchall()}
-    
     for col_name, col_def in doc_columns:
-        if col_name not in existing_docs:
-            try:
-                c.execute(f"ALTER TABLE documents ADD COLUMN {col_name} {col_def}")
-            except sqlite3.OperationalError:
-                pass
+        try:
+            db_manager.execute_query(f"ALTER TABLE documents ADD COLUMN {col_name} {col_def}")
+        except Exception:
+            pass
     
     
-    c.execute("""CREATE TABLE IF NOT EXISTS document_versions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS document_versions (
+        id SERIAL PRIMARY KEY,
         document_id INTEGER,
         version INTEGER,
         filename TEXT,
@@ -147,20 +150,52 @@ def init_unified_db():
         FOREIGN KEY (document_id) REFERENCES documents (id)
     )""")
     
-    c.execute("""CREATE TABLE IF NOT EXISTS approval_workflows (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS approval_workflows (
+        id SERIAL PRIMARY KEY,
         document_id INTEGER,
         approver TEXT,
         status TEXT DEFAULT 'pending',
-        comments TEXT,
-        created_date TEXT,
+        request_date TEXT,
         decision_date TEXT,
+        comments TEXT,
         FOREIGN KEY (document_id) REFERENCES documents (id)
+    )""")
+    
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS shared_links (
+        id SERIAL PRIMARY KEY,
+        token TEXT UNIQUE,
+        document_id INTEGER,
+        expires_at TEXT,
+        max_downloads INTEGER,
+        current_downloads INTEGER DEFAULT 0,
+        created_by TEXT,
+        FOREIGN KEY (document_id) REFERENCES documents (id)
+    )""")
+    
+    # User Sessions and Logs
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS security_logs (
+        id SERIAL PRIMARY KEY,
+        timestamp TEXT,
+        username TEXT,
+        ip_address TEXT,
+        action TEXT,
+        status TEXT,
+        details TEXT
+    )""")
+    
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        username TEXT,
+        session_id TEXT UNIQUE,
+        ip_address TEXT,
+        created_at TEXT,
+        last_activity TEXT,
+        is_active INTEGER DEFAULT 1
     )""")
 
     # Analytics
-    c.execute("""CREATE TABLE IF NOT EXISTS analytics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS analytics (
+        id SERIAL PRIMARY KEY,
         username TEXT,
         action TEXT,
         resource TEXT,
@@ -171,8 +206,8 @@ def init_unified_db():
     )""")
     
     # Document access log
-    c.execute("""CREATE TABLE IF NOT EXISTS document_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS document_access (
+        id SERIAL PRIMARY KEY,
         document_id INTEGER,
         username TEXT,
         action TEXT,
@@ -182,16 +217,14 @@ def init_unified_db():
     )""")
 
     # MFA Backup Codes
-    c.execute("""CREATE TABLE IF NOT EXISTS mfa_backup_codes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    db_manager.execute_query("""CREATE TABLE IF NOT EXISTS mfa_backup_codes (
+        id SERIAL PRIMARY KEY,
         username TEXT,
         code_hash TEXT,
-        used BOOLEAN DEFAULT 0,
+        used INTEGER DEFAULT 0,
         created_at TEXT
     )""")
     
-    conn.commit()
-    conn.close()
 
 init_unified_db()
 
@@ -243,7 +276,7 @@ def login():
             return redirect(url_for('login'))
         
         # Modified logic for login and MFA check
-        conn = sqlite3.connect("database/users.db")
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT username, password, role, mfa_enabled, plan FROM users WHERE username=?", (username,))
         result = c.fetchone()
@@ -438,7 +471,7 @@ def otp():
 def mfa_setup():
     username = session["user"]
     # Check if already enabled
-    conn = sqlite3.connect("database/users.db")
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT totp_secret, mfa_enabled FROM users WHERE username=?", (username,))
     row = c.fetchone()
@@ -467,7 +500,7 @@ def mfa_verify_challenge():
         token = request.form.get("token", "").strip()
         username = session["mfa_pending_user"]
         
-        conn = sqlite3.connect("database/users.db")
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT totp_secret FROM users WHERE username=?", (username,))
         row = c.fetchone()
@@ -503,7 +536,7 @@ def mfa_verify_backup():
     # Hash and check against DB
     code_hash = mfa_manager.hash_code(backup_code)
     
-    conn = sqlite3.connect("database/users.db")
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT id FROM mfa_backup_codes WHERE username=? AND code_hash=? AND used=0", (username, code_hash))
     row = c.fetchone()
@@ -540,7 +573,7 @@ def mfa_generate_backup_codes():
     username = session["user"]
     codes = mfa_manager.generate_backup_codes(8)
     
-    conn = sqlite3.connect("database/users.db")
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     # Delete old codes
     c.execute("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
@@ -557,13 +590,19 @@ def mfa_generate_backup_codes():
     security_manager.log_security_event(username, request.remote_addr, "MFA_BACKUP_CODES_GENERATED", "SUCCESS", "Generated 8 new backup codes")
     return jsonify({"status": "success", "codes": codes})
 
+def update_storage_usage(username, bytes_added):
+    db_manager.execute_query(
+        "UPDATE users SET storage_used = COALESCE(storage_used, 0) + ? WHERE username=?",
+        (bytes_added, username)
+    )
+
 @app.route("/mfa/revoke-backup-codes", methods=["POST"])
 @require_auth()
 @csrf_protect
 def mfa_revoke_backup_codes():
     username = session["user"]
     
-    conn = sqlite3.connect("database/users.db")
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM mfa_backup_codes WHERE username=?", (username,))
     conn.commit()
@@ -579,7 +618,7 @@ def mfa_enable():
     token = request.form.get("token", "").strip()
     username = session["user"]
     
-    conn = sqlite3.connect("database/users.db")
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT totp_secret FROM users WHERE username=?", (username,))
     row = c.fetchone()
@@ -631,7 +670,8 @@ def upload():
     files = request.files.getlist("file")
     ip_address = request.remote_addr
     user_folder = os.path.join(BASE_UPLOAD, session["user"])
-    os.makedirs(user_folder, exist_ok=True)
+    if not IS_VERCEL:
+        os.makedirs(user_folder, exist_ok=True)
     
     upload_count = 0
     try:
@@ -649,11 +689,11 @@ def upload():
                 encrypted_name = f"{file_id}.enc"
                 encrypted_data = encrypt_file(content)
                 
-                with open(os.path.join(user_folder, encrypted_name), "wb") as f:
-                    f.write(encrypted_data)
-                
-                # Update storage used
-                update_storage_usage(session["user"], len(encrypted_data))
+                # Use storage_manager for persistence
+                remote_path = f"{session['user']}/{encrypted_name}"
+                if storage_manager.upload_file(encrypted_data, remote_path):
+                    # Update storage used
+                    update_storage_usage(session["user"], len(encrypted_data))
                     
                 # Metadata & Versioning check
                 existing = db_manager.execute_query(
@@ -713,8 +753,10 @@ def download(file_id):
     info = get_file_metadata(session["user"], file_id)
     if not info: abort(404)
     
-    file_path = os.path.join(BASE_UPLOAD, session["user"], info['filename'])
-    encrypted_data = open(file_path, "rb").read()
+    remote_path = f"{session['user']}/{info['filename']}"
+    encrypted_data = storage_manager.download_file(remote_path)
+    if not encrypted_data: abort(404)
+    
     decrypted_data = decrypt_file(encrypted_data)
     
     increment_download_count(file_id)
@@ -792,10 +834,12 @@ def public_access(token):
     db_manager.execute_query("UPDATE shared_links SET current_downloads = current_downloads + 1 WHERE token=?", (token,))
     
     # Log public access
-    security_manager.log_security_event(link[6], request.remote_addr, "PUBLIC_ACCESS", "SUCCESS", f"Public download: {link[8]}")
+    security_manager.log_security_event(link['created_by'], request.remote_addr, "PUBLIC_ACCESS", "SUCCESS", f"Public download: {link['original_name']}")
     
-    file_path = os.path.join(BASE_UPLOAD, link[6], link[7]) # created_by, filename
-    encrypted_data = open(file_path, "rb").read()
+    remote_path = f"{link['created_by']}/{link['filename']}"
+    encrypted_data = storage_manager.download_file(remote_path)
+    if not encrypted_data: abort(404)
+    
     decrypted_data = decrypt_file(encrypted_data)
     
     return Response(
@@ -817,7 +861,7 @@ def get_versions(file_id):
     )
     
     # Convert to list of dicts
-    version_list = [{"id": v[0], "version": v[1], "date": v[2], "desc": v[3]} for v in versions]
+    version_list = [{"id": v['id'], "version": v['version'], "date": v['upload_date'], "desc": v['changes_description']} for v in versions]
     return jsonify({"status": "success", "versions": version_list, "current_version": info['version']})
 
 @app.route("/rollback/<int:version_id>", methods=["POST"])
@@ -833,7 +877,9 @@ def rollback_version(version_id):
     if not old_version:
         return jsonify({"status": "error", "message": "Version not found"}), 404
         
-    doc_id, v_num, old_filename = old_version
+    doc_id = old_version['document_id']
+    v_num = old_version['version']
+    old_filename = old_version['filename']
     
     # Fetch current main document
     current = db_manager.execute_query(
@@ -844,7 +890,9 @@ def rollback_version(version_id):
     if not current:
         return jsonify({"status": "error", "message": "Access denied"}), 403
         
-    curr_filename, curr_ver, orig_name = current
+    curr_filename = current['filename']
+    curr_ver = current['version']
+    orig_name = current['original_name']
     
     # Swap: move current to versions, restore old to main
     # 1. Archive current
@@ -912,12 +960,11 @@ def bulk_download_handler():
         for fid in file_ids:
             info = get_file_metadata(username, int(fid))
             if info:
-                path = os.path.join(BASE_UPLOAD, username, info['filename'])
-                if os.path.exists(path):
-                    with open(path, 'rb') as f:
-                        encrypted_data = f.read()
-                        decrypted_data = decrypt_file(encrypted_data)
-                        zip_file.writestr(info['original_name'], decrypted_data)
+                remote_path = f"{username}/{info['filename']}"
+                encrypted_data = storage_manager.download_file(remote_path)
+                if encrypted_data:
+                    decrypted_data = decrypt_file(encrypted_data)
+                    zip_file.writestr(info['original_name'], decrypted_data)
     
     zip_buffer.seek(0)
     return Response(
@@ -954,17 +1001,15 @@ def purge_file(file_id):
     if not info:
         return jsonify({"status": "error", "message": "File not found"}), 404
         
-    # 1. Delete actual file from disk
-    file_path = os.path.join(BASE_UPLOAD, session["user"], info['filename'])
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # 1. Delete actual file from storage
+    remote_path = f"{session['user']}/{info['filename']}"
+    storage_manager.delete_file(remote_path)
         
-    # 2. Delete versions from disk
+    # 2. Delete versions from storage
     versions = db_manager.execute_query("SELECT filename FROM document_versions WHERE document_id=?", (file_id,), fetch_all=True)
     for v in versions:
-        v_path = os.path.join(BASE_UPLOAD, session["user"], v[0])
-        if os.path.exists(v_path):
-            os.remove(v_path)
+        v_remote_path = f"{session['user']}/{v['filename']}"
+        storage_manager.delete_file(v_remote_path)
             
     # 3. Purge DB records
     db_manager.execute_query("DELETE FROM documents WHERE id=?", (file_id,))

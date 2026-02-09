@@ -2,4 +2,14 @@ Flask
 cryptography
 flask-mail
 werkzeug
+python-dotenv
+gunicorn
+pyotp
+qrcode
+Pillow
+flask-wtf
+python-magic
+psutil
+psycopg2-binary
+boto3
 

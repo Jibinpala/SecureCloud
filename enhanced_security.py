@@ -4,7 +4,6 @@ import time
 import json
 from functools import wraps
 from flask import request, session, abort, current_app
-import sqlite3
 from datetime import datetime, timedelta
 import secrets
 import mimetypes
