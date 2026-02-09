@@ -480,7 +480,7 @@ def mfa_setup():
     
     if row and row.get('mfa_enabled'):
         flash("MFA is already enabled.")
-        return redirect(url_for('professional_dashboard'))
+        return redirect(url_for('dashboard'))
     
     secret = row['totp_secret'] if row and row.get('totp_secret') else mfa_manager.generate_secret()
     if not row or not row.get('totp_secret'):
