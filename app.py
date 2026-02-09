@@ -86,7 +86,9 @@ def init_unified_db():
         ("permissions", "TEXT DEFAULT 'read,write'"),
         ("totp_secret", "TEXT"),
         ("email", "TEXT"),
-        ("email_hash", "TEXT")
+        ("email_hash", "TEXT"),
+        ("mfa_enabled", "INTEGER DEFAULT 0"),
+        ("suspended", "INTEGER DEFAULT 0")
     ]
     
     for col_name, col_def in columns:
